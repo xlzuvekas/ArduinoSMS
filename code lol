@@ -1,0 +1,254 @@
+#include "Adafruit_FONA.h"
+#include <Wire.h>
+#include <Adafruit_RGBLCDShield.h>
+#include <utility/Adafruit_MCP23017.h>
+#include <LiquidCrystal.h>
+#include <Keypad.h>
+#define FONA_RX 2
+#define FONA_TX 3
+#define FONA_RST 4
+
+const byte ROWS = 4; //four rows
+const byte COLS = 4; //four columns
+char keys[ROWS][COLS] = {
+  {'1', '2', '3', 'A'},
+  {'4', '5', '6', 'B'},
+  {'7', '8', '9', 'C'},
+  {'*', '0', '#', 'D'}
+};
+
+byte rowPins[ROWS] = {8, 9, 10, 11};
+
+byte colPins[COLS] = {4, 5, 6, 7};
+
+Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+
+void flushSerial() {
+  while (Serial.available())
+    Serial.read();
+}
+
+char readBlocking() {
+  while (!Serial.available());
+  return Serial.read();
+}
+uint16_t readnumber() {
+  uint16_t x = 0;
+  char c;
+  while (! isdigit(c = readBlocking())) {
+    //Serial.print(c);
+  }
+  Serial.print(c);
+  x = c - '0';
+  while (isdigit(c = readBlocking())) {
+    Serial.print(c);
+    x *= 10;
+    x += c - '0';
+  }
+  return x;
+}
+
+uint8_t readline(char *buff, uint8_t maxbuff, uint16_t timeout) {
+  uint16_t buffidx = 0;
+  boolean timeoutvalid = true;
+  if (timeout == 0) timeoutvalid = false;
+
+  while (true) {
+    if (buffidx > maxbuff) {
+      //Serial.println(F("SPACE"));
+      break;
+    }
+
+    while (true) {
+      char c =  keypad.getKey();
+
+      //Serial.print(c, HEX); Serial.print("#"); Serial.println(c);
+
+      if (c == '\r') continue;
+      if (c == 0xA) {
+        if (buffidx == 0)   // the first 0x0A is ignored
+          continue;
+
+        timeout = 0;         // the second 0x0A is the end of the line
+        timeoutvalid = true;
+        break;
+      }
+      buff[buffidx] = c;
+      buffidx++;
+    }
+
+    if (timeoutvalid && timeout == 0) {
+      //Serial.println(F("TIMEOUT"));
+      break;
+    }
+    delay(1);
+  }
+  buff[buffidx] = 0;  // null term
+  return buffidx;
+}
+
+
+
+String number;
+
+
+
+char replybuffer[255];
+
+int input;
+
+
+
+char menu[6][20] = {"(1) Send", "(2) Wi-fi", "(3) SMS # Read", "(4) SMS Amount", "(5) SMS Read All", "(6) SMS # Delete"};
+
+char phoneNumber[10][1];
+
+#include <SoftwareSerial.h>
+SoftwareSerial fonaSS = SoftwareSerial(FONA_TX, FONA_RX);
+SoftwareSerial *fonaSerial = &fonaSS;
+
+Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
+
+
+
+const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
+
+int i = 0;
+int x = 0;
+boolean optionscreen = false;
+
+void printmenu() {
+  optionscreen = false;
+  //clear screen
+  lcd.clear();
+  //print on line one
+  lcd.setCursor(0, 0);
+  lcd.print(menu[i]);
+  //print line two of menu
+  lcd.setCursor(0, 1);
+  lcd.print(menu[i + 1]);
+
+uint8_t readline(char *buff, uint8_t maxbuff, uint16_t timeout = 0);
+
+uint8_t type;
+
+
+
+}
+
+void setup() {
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  printmenu();
+}
+
+void loop() {
+  char key = keypad.getKey();
+  char phoneNum = keypad.getKey();
+
+  //lcd.setCursor(0,1);
+  //lcd.print(menu[i+1]);
+  uint8_t buttons = lcd.readButtons();
+
+  if (buttons & BUTTON_SELECT) {
+    lcd.clear();
+    lcd.print("Select option:");
+    optionscreen = true;
+
+
+  }
+
+  if (buttons & BUTTON_DOWN) {
+    if (i < 4)
+      i++;
+    printmenu();
+  }
+  if (buttons & BUTTON_UP) {
+    if (i > 0)
+      i--;
+    printmenu();
+  }
+
+    switch (key) {
+      case ('1'):
+        {
+          lcd.clear();
+
+          for(int x=0; x<10; x++)
+          {
+            phoneNum = phoneNumber[x];
+            lcd.print(phoneNumber[x]);
+          }
+
+        char sendto[21], message[141];
+        flushSerial();
+        lcd.print("Sending to:");
+        lcd.setCursor(0, 1);
+        lcd.print("508-641-7955");
+        readline(sendto, 20, 1);
+
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print(sendto);
+       // lcd.setCursor(0, 1);
+       // lcd.print(
+        
+        /*Serial.print(F("Type out one-line message (140 char): "));
+        readline(message, 140);
+        Serial.println(message);
+        if (!fona.sendSMS(sendto, message)) {
+          Serial.println(F("Failed"));
+        } else {
+          Serial.println(F("Sent!"));
+        }*/
+          
+        }
+        break;
+      case ('2'):
+        {
+          lcd.clear();
+          lcd.print("two");
+        }
+        break;
+        case ('3'):
+        {
+          lcd.clear();
+          lcd.print("three");
+        }
+        break;
+        case ('4'):
+        {
+          lcd.clear();
+          lcd.print("four");
+        }
+        break;
+        case ('5'):
+        {
+          lcd.clear();
+          lcd.print("five");
+        }
+        break;
+        case ('6'):
+        {
+          lcd.clear();
+          lcd.print("six");
+        }
+        break;
+        
+        
+
+
+    }
+
+
+  }
+//}
+
+
+// if (key){
+//  input = key;
+//  lcd.setCursor(x,1);
+//  lcd.println(input);
+//  x++;
+//  }
